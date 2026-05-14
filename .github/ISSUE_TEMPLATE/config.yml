@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
+  - name: Feedback discussion
+    url: https://github.com/lihua8552-afk/pg-migration-guard/discussions
+    about: Share open-ended feedback, adoption notes, and use cases.
   - name: Security vulnerability
-    url: https://github.com/lihua8552-afk/mguard/security/advisories/new
+    url: https://github.com/lihua8552-afk/pg-migration-guard/security/advisories/new
     about: Please report security issues privately through GitHub Security Advisories.

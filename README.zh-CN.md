@@ -171,6 +171,16 @@ SARIF 输出可以接入 GitHub code scanning 或其他安全看板。
 
 mguard 适合在早期 CI 阶段检查原生 PostgreSQL `.sql` 迁移。首个版本聚焦确定性的 SQL 安全规则。Rails、Prisma、Alembic 以及其他框架 DSL 适配器可以作为后续方向。
 
+## 反馈与评价
+
+如果你已经用真实迁移试过，可以通过 [反馈表单](https://github.com/lihua8552-afk/pg-migration-guard/issues/new?template=feedback.yml) 留下简短评价或采用阻碍。最有价值的反馈包括：
+
+- 误报或漏报，最好附带已脱敏的 SQL；
+- 缺失的规则、框架适配器或 CI 集成；
+- 还差什么，才足够让你把它放进发布流程。
+
+更开放的讨论可以发到 [GitHub Discussions](https://github.com/lihua8552-afk/pg-migration-guard/discussions)。
+
 ## 开发
 
 ```sh

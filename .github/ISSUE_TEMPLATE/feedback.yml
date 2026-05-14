@@ -1,0 +1,66 @@
+name: Feedback / review
+description: Share a quick rating, trial result, false positive, or adoption blocker.
+title: "[Feedback]: "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying Postgres Migration Guard. Short feedback is useful; you do not need to write a full bug report.
+
+        If your SQL contains private schema details, please redact table names, column names, literals, and business-specific comments before posting.
+  - type: dropdown
+    id: rating
+    attributes:
+      label: Overall impression
+      description: How likely are you to try or keep using mguard?
+      options:
+        - "5 - I would use it in CI today"
+        - "4 - Useful, with small improvements needed"
+        - "3 - Promising, but not ready for my workflow"
+        - "2 - Interesting, but too much friction"
+        - "1 - Not useful for my case"
+    validations:
+      required: true
+  - type: dropdown
+    id: usage
+    attributes:
+      label: How did you try it?
+      options:
+        - Local CLI
+        - GitHub Action
+        - SARIF / code scanning
+        - Read the docs only
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: worked
+    attributes:
+      label: What worked well?
+      description: Mention any rule, output format, workflow, or documentation that felt useful.
+    validations:
+      required: false
+  - type: textarea
+    id: blockers
+    attributes:
+      label: What stopped you from adopting it?
+      description: Missing framework support, noisy findings, unclear setup, release packaging, docs, or anything else.
+    validations:
+      required: false
+  - type: textarea
+    id: finding_quality
+    attributes:
+      label: Finding quality
+      description: Share false positives, false negatives, confusing severity, or rules you expected to exist.
+      render: markdown
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Environment and migration style
+      description: PostgreSQL version, migration framework, CI provider, approximate schema size, or other context.
+      placeholder: "PostgreSQL 16, Rails SQL migrations, GitHub Actions, about 200 tables..."
+    validations:
+      required: false

@@ -171,6 +171,16 @@ Use SARIF with GitHub code scanning or other security dashboards.
 
 mguard is suitable for early CI adoption on raw PostgreSQL `.sql` migrations. The first release focuses on deterministic safety checks for SQL files. Rails, Prisma, Alembic, and framework-specific migration adapters are good candidates for future work.
 
+## Feedback
+
+Tried it on real migrations? Please leave a quick rating or adoption note through the [feedback form](https://github.com/lihua8552-afk/pg-migration-guard/issues/new?template=feedback.yml). The most useful feedback includes:
+
+- false positives or false negatives, with redacted SQL if possible;
+- missing rules, framework adapters, or CI integrations;
+- what would make the tool trustworthy enough for your release workflow.
+
+Open-ended discussion is welcome in [GitHub Discussions](https://github.com/lihua8552-afk/pg-migration-guard/discussions).
+
 ## Development
 
 ```sh
