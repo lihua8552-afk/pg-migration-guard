@@ -3,8 +3,8 @@ package rules
 import (
 	"testing"
 
-	"github.com/lihua8552-afk/mguard/internal/model"
-	"github.com/lihua8552-afk/mguard/internal/parser"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/model"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/parser"
 )
 
 func TestEvaluateCreateIndexLargeTable(t *testing.T) {

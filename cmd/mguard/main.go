@@ -9,10 +9,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lihua8552-afk/mguard/internal/config"
-	"github.com/lihua8552-afk/mguard/internal/engine"
-	"github.com/lihua8552-afk/mguard/internal/model"
-	"github.com/lihua8552-afk/mguard/internal/report"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/config"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/engine"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/model"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/report"
 )
 
 var version = "0.1.0"

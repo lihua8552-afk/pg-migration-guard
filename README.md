@@ -1,17 +1,38 @@
-# mguard
+# Postgres Migration Guard
 
-[![CI](https://github.com/lihua8552-afk/mguard/actions/workflows/ci.yml/badge.svg)](https://github.com/lihua8552-afk/mguard/actions/workflows/ci.yml)
-[![Release](https://github.com/lihua8552-afk/mguard/actions/workflows/release.yml/badge.svg)](https://github.com/lihua8552-afk/mguard/actions/workflows/release.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/lihua8552-afk/mguard.svg)](https://pkg.go.dev/github.com/lihua8552-afk/mguard)
+[![CI](https://github.com/lihua8552-afk/pg-migration-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/lihua8552-afk/pg-migration-guard/actions/workflows/ci.yml)
+[![Release](https://github.com/lihua8552-afk/pg-migration-guard/actions/workflows/release.yml/badge.svg)](https://github.com/lihua8552-afk/pg-migration-guard/actions/workflows/release.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/lihua8552-afk/pg-migration-guard.svg)](https://pkg.go.dev/github.com/lihua8552-afk/pg-migration-guard)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 **English** | [简体中文](README.zh-CN.md)
 
-mguard is an open-source PostgreSQL migration safety checker for teams that ship database changes through CI/CD. It scans raw `.sql` migration files before deploy and flags operations that can lock large tables, destroy data, break rolling deploys, or create hard-to-roll-back production incidents.
+**Ship PostgreSQL migrations with a safety net.** Postgres Migration Guard, powered by the `mguard` CLI, scans raw `.sql` migrations before deploy and flags changes that can lock large tables, destroy data, break rolling deploys, or create hard-to-roll-back production incidents.
 
 The core rule engine is deterministic and does not require AI. Optional bring-your-own-key AI explanations can make findings easier to understand, but AI never decides severity and never suppresses rule results.
 
-## Why mguard
+```text
+[CRITICAL] MGD001 CREATE INDEX CONCURRENTLY cannot run inside an explicit transaction.
+[HIGH]     MGD010 Dropping column legacy_status is destructive.
+[HIGH]     MGD030 UPDATE without WHERE can rewrite every row in accounts.
+```
+
+## Try It In 30 Seconds
+
+```sh
+git clone https://github.com/lihua8552-afk/pg-migration-guard.git
+cd pg-migration-guard
+go run ./cmd/mguard check examples/migrations/001_dangerous.sql --format markdown
+```
+
+Or install the CLI:
+
+```sh
+go install github.com/lihua8552-afk/pg-migration-guard/cmd/mguard@latest
+mguard check migrations --format text --fail-on high
+```
+
+## Why Teams Notice It
 
 - **Production-focused migration rules**: catches risky indexes, destructive DDL, unsafe DML, table rewrites, invalid SQL, and rolling-deploy incompatibilities.
 - **PostgreSQL-aware parsing**: uses a PostgreSQL parser backed by WASM with a tokenizer fallback for recoverable parser failures.
@@ -19,18 +40,6 @@ The core rule engine is deterministic and does not require AI. Optional bring-yo
 - **Optional database metadata**: can read table sizes, row estimates, columns, indexes, and constraints through a read-only PostgreSQL connection for more accurate severity.
 - **Privacy-conscious AI mode**: AI is disabled by default; BYOK providers are optional, and SQL literal redaction is available.
 - **GitHub Action included**: use the project as a drop-in migration safety gate in pull requests.
-
-## Quick Start
-
-```sh
-go run ./cmd/mguard check examples/migrations/002_safer.sql --format markdown
-```
-
-Install the CLI:
-
-```sh
-go install github.com/lihua8552-afk/mguard/cmd/mguard@latest
-```
 
 Create a config file:
 
@@ -84,7 +93,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: lihua8552-afk/mguard@v0.1.0
+      - uses: lihua8552-afk/pg-migration-guard@v0.1.0
         with:
           paths: |
             migrations

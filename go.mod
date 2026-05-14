@@ -1,4 +1,4 @@
-module github.com/lihua8552-afk/mguard
+module github.com/lihua8552-afk/pg-migration-guard
 
 go 1.25.10
 

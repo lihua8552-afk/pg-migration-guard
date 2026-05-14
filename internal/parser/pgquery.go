@@ -7,7 +7,7 @@ import (
 	pganalyze "github.com/pganalyze/pg_query_go/v6"
 	pgquery "github.com/wasilibs/go-pgquery"
 
-	"github.com/lihua8552-afk/mguard/internal/model"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/model"
 )
 
 func parseWithPGQuery(path, sql string) (model.FileAnalysis, error) {

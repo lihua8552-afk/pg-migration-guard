@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lihua8552-afk/mguard/internal/model"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/model"
 )
 
 const (

@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/lihua8552-afk/mguard/internal/model"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/model"
 )
 
 func Write(w io.Writer, format string, result model.Result) error {
@@ -113,7 +113,7 @@ func WriteSARIF(w io.Writer, result model.Result) error {
 		Runs: []sarifRun{{
 			Tool: sarifTool{Driver: sarifDriver{
 				Name:           "mguard",
-				InformationURI: "https://github.com/lihua8552-afk/mguard",
+				InformationURI: "https://github.com/lihua8552-afk/pg-migration-guard",
 				Rules:          sarifRules(result.Findings),
 			}},
 			Results: sarifResults(result.Findings),

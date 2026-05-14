@@ -8,7 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/lihua8552-afk/mguard/internal/model"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/model"
 )
 
 func LoadPostgres(ctx context.Context, dsn string) (*model.DBMetadata, error) {

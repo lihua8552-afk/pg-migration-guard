@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lihua8552-afk/mguard/internal/config"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/config"
 )
 
 func TestRunStrictPathsRejectsMissingPath(t *testing.T) {

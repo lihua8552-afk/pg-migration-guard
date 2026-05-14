@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lihua8552-afk/mguard/internal/ai"
-	"github.com/lihua8552-afk/mguard/internal/config"
-	"github.com/lihua8552-afk/mguard/internal/introspect"
-	"github.com/lihua8552-afk/mguard/internal/model"
-	"github.com/lihua8552-afk/mguard/internal/parser"
-	"github.com/lihua8552-afk/mguard/internal/rules"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/ai"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/config"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/introspect"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/model"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/parser"
+	"github.com/lihua8552-afk/pg-migration-guard/internal/rules"
 )
 
 type Options struct {

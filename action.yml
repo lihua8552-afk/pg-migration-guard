@@ -1,5 +1,5 @@
-name: mguard
-description: PostgreSQL migration safety checks for SQL migration files.
+name: pg-migration-guard
+description: PostgreSQL migration safety checks for CI/CD and pull requests.
 author: mguard contributors
 
 inputs:
