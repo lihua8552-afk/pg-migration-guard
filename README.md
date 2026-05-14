@@ -5,7 +5,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/lihua8552-afk/pg-migration-guard.svg)](https://pkg.go.dev/github.com/lihua8552-afk/pg-migration-guard)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**English** | [简体中文](README.zh-CN.md)
+**English** | [简体中文](README.zh-CN.md) | [Launch announcement](docs/LAUNCH_ANNOUNCEMENT.md)
 
 **Ship PostgreSQL migrations with a safety net.** Postgres Migration Guard, powered by the `mguard` CLI, scans raw `.sql` migrations before deploy and flags changes that can lock large tables, destroy data, break rolling deploys, or create hard-to-roll-back production incidents.
 

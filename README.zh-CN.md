@@ -5,7 +5,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/lihua8552-afk/pg-migration-guard.svg)](https://pkg.go.dev/github.com/lihua8552-afk/pg-migration-guard)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-[English](README.md) | **简体中文**
+[English](README.md) | **简体中文** | [发布介绍](docs/LAUNCH_ANNOUNCEMENT.md#中文)
 
 **给 PostgreSQL 迁移加一层发布前安全网。** Postgres Migration Guard 由 `mguard` CLI 驱动，会在部署前扫描原生 `.sql` 迁移文件，发现可能锁大表、破坏数据、影响滚动发布或制造难以回滚事故的高风险操作。
 
