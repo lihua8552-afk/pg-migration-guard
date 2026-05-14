@@ -1,0 +1,202 @@
+name: mguard
+description: PostgreSQL migration safety checks for SQL migration files.
+author: mguard contributors
+
+inputs:
+  paths:
+    description: Space-separated migration files or directories. Use newline-separated values for paths containing spaces.
+    required: false
+    default: migrations
+  config:
+    description: Path to mguard.yaml in the checked-out repository.
+    required: false
+    default: mguard.yaml
+  database-url:
+    description: Optional read-only PostgreSQL DSN.
+    required: false
+    default: ""
+  fail-on:
+    description: Minimum severity that fails the check.
+    required: false
+    default: high
+  format:
+    description: "Report format: markdown, text, json, sarif."
+    required: false
+    default: markdown
+  comment-pr:
+    description: Comment the report on pull requests.
+    required: false
+    default: "false"
+  ai-provider:
+    description: "Optional AI provider override for generated explanations: openai, anthropic, ollama."
+    required: false
+    default: ""
+  ai-api-key:
+    description: Optional AI API key for OpenAI or Anthropic.
+    required: false
+    default: ""
+  ai-redact:
+    description: Redact SQL literals before sending findings to AI providers.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: ${{ github.action_path }}/go.mod
+        cache-dependency-path: ${{ github.action_path }}/go.sum
+
+    - name: Run mguard
+      id: mguard
+      shell: bash
+      env:
+        DATABASE_URL: ${{ inputs.database-url }}
+        MGUARD_AI_KEY: ${{ inputs.ai-api-key }}
+        INPUT_PATHS: ${{ inputs.paths }}
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_AI_PROVIDER: ${{ inputs.ai-provider }}
+        INPUT_AI_REDACT: ${{ inputs.ai-redact }}
+      run: |
+        set +e
+        REPORT="$RUNNER_TEMP/mguard-report"
+        BINARY="$RUNNER_TEMP/mguard"
+        AI_FLAG="off"
+
+        case "$INPUT_FORMAT" in
+          markdown|text|json|sarif) ;;
+          *)
+            echo "invalid mguard format: $INPUT_FORMAT" > "$REPORT"
+            echo "report=$REPORT" >> "$GITHUB_OUTPUT"
+            echo "status=2" >> "$GITHUB_OUTPUT"
+            cat "$REPORT"
+            exit 0
+            ;;
+        esac
+
+        case "$INPUT_FAIL_ON" in
+          low|medium|high|critical) ;;
+          *)
+            echo "invalid mguard fail-on severity: $INPUT_FAIL_ON" > "$REPORT"
+            echo "report=$REPORT" >> "$GITHUB_OUTPUT"
+            echo "status=2" >> "$GITHUB_OUTPUT"
+            cat "$REPORT"
+            exit 0
+            ;;
+        esac
+
+        case "$INPUT_AI_REDACT" in
+          true|false) ;;
+          *)
+            echo "invalid mguard ai-redact value: $INPUT_AI_REDACT" > "$REPORT"
+            echo "report=$REPORT" >> "$GITHUB_OUTPUT"
+            echo "status=2" >> "$GITHUB_OUTPUT"
+            cat "$REPORT"
+            exit 0
+            ;;
+        esac
+
+        path_args=()
+        if [[ "$INPUT_PATHS" == *$'\n'* ]]; then
+          while IFS= read -r path; do
+            path="${path#"${path%%[![:space:]]*}"}"
+            path="${path%"${path##*[![:space:]]}"}"
+            if [ -n "$path" ]; then
+              path_args+=("$path")
+            fi
+          done <<< "$INPUT_PATHS"
+        else
+          read -r -a path_args <<< "$INPUT_PATHS"
+        fi
+
+        if [ "${#path_args[@]}" -eq 0 ]; then
+          echo "no migration paths were provided" > "$REPORT"
+          echo "report=$REPORT" >> "$GITHUB_OUTPUT"
+          echo "status=2" >> "$GITHUB_OUTPUT"
+          cat "$REPORT"
+          exit 0
+        fi
+
+        if [ -n "$INPUT_AI_PROVIDER" ]; then
+          case "$INPUT_AI_PROVIDER" in
+            openai|anthropic|ollama) ;;
+            *)
+              echo "invalid mguard ai-provider: $INPUT_AI_PROVIDER" > "$REPORT"
+              echo "report=$REPORT" >> "$GITHUB_OUTPUT"
+              echo "status=2" >> "$GITHUB_OUTPUT"
+              cat "$REPORT"
+              exit 0
+              ;;
+          esac
+          AI_FLAG="on"
+        fi
+
+        if [ -n "$INPUT_AI_PROVIDER" ]; then
+          cat > "$RUNNER_TEMP/mguard-action.yaml" <<EOF
+        database:
+          dialect: postgres
+          dsn_env: DATABASE_URL
+        migrations:
+          paths:
+            - migrations
+        risk:
+          fail_on: $INPUT_FAIL_ON
+        ai:
+          enabled: true
+          provider: $INPUT_AI_PROVIDER
+          model: ""
+          api_key_env: MGUARD_AI_KEY
+          base_url: ""
+          redact_sql: $INPUT_AI_REDACT
+        EOF
+          CONFIG_ARG="$RUNNER_TEMP/mguard-action.yaml"
+        else
+          CONFIG_ARG="$INPUT_CONFIG"
+        fi
+        go build -C "${{ github.action_path }}" -o "$BINARY" ./cmd/mguard
+        BUILD_STATUS=$?
+        if [ "$BUILD_STATUS" -ne 0 ]; then
+          echo "mguard build failed" > "$REPORT"
+          STATUS=$BUILD_STATUS
+        else
+          "$BINARY" check \
+          -config "$CONFIG_ARG" \
+          -dsn-env DATABASE_URL \
+          -format "$INPUT_FORMAT" \
+          -fail-on "$INPUT_FAIL_ON" \
+          -ai "$AI_FLAG" \
+          -ai-redact="$INPUT_AI_REDACT" \
+          "${path_args[@]}" > "$REPORT"
+          STATUS=$?
+        fi
+        cat "$REPORT"
+        {
+          echo "report=$REPORT"
+          echo "status=$STATUS"
+        } >> "$GITHUB_OUTPUT"
+        if [ "$INPUT_FORMAT" = "markdown" ] || [ "$INPUT_FORMAT" = "text" ]; then
+          cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+        fi
+        exit 0
+
+    - name: Comment pull request
+      if: ${{ always() && inputs.comment-pr == 'true' && github.event_name == 'pull_request' }}
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('${{ steps.mguard.outputs.report }}', 'utf8');
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: report.slice(0, 60000)
+          });
+
+    - name: Fail on migration risk
+      if: ${{ always() }}
+      shell: bash
+      run: exit "${{ steps.mguard.outputs.status }}"

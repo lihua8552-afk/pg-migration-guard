@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a parsing issue, incorrect finding, crash, or CLI problem.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: migration
+    attributes:
+      label: Minimal SQL migration
+      description: Paste the smallest SQL snippet that reproduces the issue. Redact private schema details if needed.
+      render: sql
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and output
+      description: Include the mguard command, version, and relevant output.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: postgres
+    attributes:
+      label: PostgreSQL version
+      placeholder: "16.2"
+  - type: input
+    id: mguard
+    attributes:
+      label: mguard version
+      placeholder: "0.1.0"

@@ -1,0 +1,10 @@
+bin/
+dist/
+coverage.out
+/mguard
+/mguard.exe
+*.test
+.env
+.DS_Store
+tmp/
+vendor/
