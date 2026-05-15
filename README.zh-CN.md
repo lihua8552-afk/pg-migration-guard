@@ -93,7 +93,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: lihua8552-afk/pg-migration-guard@v0.1.0
+      - uses: lihua8552-afk/pg-migration-guard@v0.1.1
         with:
           paths: |
             migrations

@@ -4,9 +4,10 @@ All notable changes to mguard will be documented in this file.
 
 The project follows semantic versioning after the first stable release.
 
-## Unreleased
+## 0.1.1 - Marketplace-ready action metadata
 
 - Added first-class OpenAI-compatible gateway support through `provider: openai-compatible`, configurable `base_url`, `model`, and CLI/GitHub Action overrides.
+- Added Marketplace-friendly Action name, description, icon, and color metadata.
 
 ## 0.1.0 - Initial public release
 

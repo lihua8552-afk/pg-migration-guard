@@ -15,7 +15,7 @@ import (
 	"github.com/lihua8552-afk/pg-migration-guard/internal/report"
 )
 
-var version = "0.1.0"
+var version = "0.1.1"
 
 func main() {
 	os.Exit(run(context.Background(), os.Args[1:], os.Stdout, os.Stderr))

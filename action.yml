@@ -1,6 +1,10 @@
-name: pg-migration-guard
-description: PostgreSQL migration safety checks for CI/CD and pull requests.
+name: Postgres Migration Guard
+description: Catch risky PostgreSQL migrations in CI/CD before they lock tables, destroy data, or break deploys.
 author: mguard contributors
+
+branding:
+  icon: database
+  color: blue
 
 inputs:
   paths:
