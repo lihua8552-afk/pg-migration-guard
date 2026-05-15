@@ -28,11 +28,19 @@ inputs:
     required: false
     default: "false"
   ai-provider:
-    description: "Optional AI provider override for generated explanations: openai, anthropic, ollama."
+    description: "Optional AI provider override for generated explanations: openai, openai-compatible, anthropic, ollama."
+    required: false
+    default: ""
+  ai-model:
+    description: Optional AI model override. Required for openai-compatible gateways unless your config file sets ai.model.
+    required: false
+    default: ""
+  ai-base-url:
+    description: Optional AI API base URL. For OpenAI-compatible gateways, use a /v1 base URL or a full /v1/chat/completions endpoint.
     required: false
     default: ""
   ai-api-key:
-    description: Optional AI API key for OpenAI or Anthropic.
+    description: Optional AI API key for OpenAI, OpenAI-compatible gateways, or Anthropic.
     required: false
     default: ""
   ai-redact:
@@ -59,12 +67,15 @@ runs:
         INPUT_FAIL_ON: ${{ inputs.fail-on }}
         INPUT_FORMAT: ${{ inputs.format }}
         INPUT_AI_PROVIDER: ${{ inputs.ai-provider }}
+        INPUT_AI_MODEL: ${{ inputs.ai-model }}
+        INPUT_AI_BASE_URL: ${{ inputs.ai-base-url }}
         INPUT_AI_REDACT: ${{ inputs.ai-redact }}
       run: |
         set +e
         REPORT="$RUNNER_TEMP/mguard-report"
         BINARY="$RUNNER_TEMP/mguard"
-        AI_FLAG="off"
+        AI_FLAG=""
+        ai_args=()
 
         case "$INPUT_FORMAT" in
           markdown|text|json|sarif) ;;
@@ -120,11 +131,20 @@ runs:
           exit 0
         fi
 
-        if [ -n "$INPUT_AI_PROVIDER" ]; then
-          case "$INPUT_AI_PROVIDER" in
-            openai|anthropic|ollama) ;;
+        AI_PROVIDER="$INPUT_AI_PROVIDER"
+        if [ -z "$AI_PROVIDER" ]; then
+          if [ -n "$INPUT_AI_BASE_URL" ] || [ -n "$INPUT_AI_MODEL" ]; then
+            AI_PROVIDER="openai-compatible"
+          elif [ -n "$MGUARD_AI_KEY" ]; then
+            AI_PROVIDER="openai"
+          fi
+        fi
+
+        if [ -n "$AI_PROVIDER" ]; then
+          case "$AI_PROVIDER" in
+            openai|openai-compatible|openai_compatible|compatible|custom|anthropic|ollama) ;;
             *)
-              echo "invalid mguard ai-provider: $INPUT_AI_PROVIDER" > "$REPORT"
+              echo "invalid mguard ai-provider: $AI_PROVIDER" > "$REPORT"
               echo "report=$REPORT" >> "$GITHUB_OUTPUT"
               echo "status=2" >> "$GITHUB_OUTPUT"
               cat "$REPORT"
@@ -132,30 +152,17 @@ runs:
               ;;
           esac
           AI_FLAG="on"
+          ai_args+=("-ai" "$AI_FLAG" "-ai-provider" "$AI_PROVIDER")
+          if [ -n "$INPUT_AI_MODEL" ]; then
+            ai_args+=("-ai-model" "$INPUT_AI_MODEL")
+          fi
+          if [ -n "$INPUT_AI_BASE_URL" ]; then
+            ai_args+=("-ai-base-url" "$INPUT_AI_BASE_URL")
+          fi
+          ai_args+=("-ai-api-key-env" "MGUARD_AI_KEY" "-ai-redact=$INPUT_AI_REDACT")
         fi
 
-        if [ -n "$INPUT_AI_PROVIDER" ]; then
-          cat > "$RUNNER_TEMP/mguard-action.yaml" <<EOF
-        database:
-          dialect: postgres
-          dsn_env: DATABASE_URL
-        migrations:
-          paths:
-            - migrations
-        risk:
-          fail_on: $INPUT_FAIL_ON
-        ai:
-          enabled: true
-          provider: $INPUT_AI_PROVIDER
-          model: ""
-          api_key_env: MGUARD_AI_KEY
-          base_url: ""
-          redact_sql: $INPUT_AI_REDACT
-        EOF
-          CONFIG_ARG="$RUNNER_TEMP/mguard-action.yaml"
-        else
-          CONFIG_ARG="$INPUT_CONFIG"
-        fi
+        CONFIG_ARG="$INPUT_CONFIG"
         go build -C "${{ github.action_path }}" -o "$BINARY" ./cmd/mguard
         BUILD_STATUS=$?
         if [ "$BUILD_STATUS" -ne 0 ]; then
@@ -167,8 +174,7 @@ runs:
           -dsn-env DATABASE_URL \
           -format "$INPUT_FORMAT" \
           -fail-on "$INPUT_FAIL_ON" \
-          -ai "$AI_FLAG" \
-          -ai-redact="$INPUT_AI_REDACT" \
+          "${ai_args[@]}" \
           "${path_args[@]}" > "$REPORT"
           STATUS=$?
         fi

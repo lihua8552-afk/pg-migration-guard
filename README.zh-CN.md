@@ -102,6 +102,11 @@ jobs:
           fail-on: high
           format: markdown
           comment-pr: "true"
+          ai-provider: openai-compatible
+          ai-base-url: ${{ secrets.AI_BASE_URL }}
+          ai-model: deepseek-chat
+          ai-api-key: ${{ secrets.AI_API_KEY }}
+          ai-redact: "true"
 ```
 
 ## 可选数据库元数据
@@ -126,13 +131,30 @@ grant select on all tables in schema public to mguard_readonly;
 
 ## AI BYOK
 
-AI 解释是可选能力。当前支持 `openai`、`anthropic` 和 `ollama`。
+AI 解释是可选能力。当前支持 `openai`、`openai-compatible`、`anthropic` 和 `ollama`。
 
 启用 AI 时，mguard 会把每个 finding 的规则、严重级别、文件位置、SQL 语句、原因和建议发送给配置的提供方。可以使用 `redact_sql: true` 或 `--ai-redact` 脱敏字符串、数字、dollar-quoted body 以及 `E'...'`/`B'...'`/`X'...'` 字面量。表名和列名会保留，因为它们对迁移建议有必要。
 
+如果使用 OpenAI-compatible 的 AI 中转站，只需要配置密钥环境变量、中转站地址和模型：
+
+```yaml
+ai:
+  enabled: true
+  provider: openai-compatible
+  model: deepseek-chat
+  api_key_env: MGUARD_AI_KEY
+  base_url: https://your-gateway.example.com/v1
+  redact_sql: true
+```
+
+`base_url` 可以是 `/v1` 基础地址，也可以是完整的 `/v1/chat/completions` 请求地址。也可以直接通过 CLI 传入：
+
 ```sh
-MGUARD_AI_KEY=... mguard check migrations --ai on
-MGUARD_AI_KEY=... mguard check migrations --ai on --ai-redact
+MGUARD_AI_KEY=... mguard check migrations \
+  --ai-provider openai-compatible \
+  --ai-base-url https://your-gateway.example.com/v1 \
+  --ai-model deepseek-chat \
+  --ai-redact
 ```
 
 ## 规则覆盖

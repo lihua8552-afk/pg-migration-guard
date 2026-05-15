@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,6 +66,49 @@ func TestCheckBoolFlagDoesNotConsumePath(t *testing.T) {
 	code := run(context.Background(), []string{"check", "-ai-redact", "-format", "json", migration}, &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("code = %d, stderr = %s, stdout = %s", code, stderr.String(), stdout.String())
+	}
+}
+
+func TestCheckAIProviderFlagsUseCompatibleGateway(t *testing.T) {
+	dir := t.TempDir()
+	migration := filepath.Join(dir, "001.sql")
+	if err := os.WriteFile(migration, []byte("UPDATE users SET disabled = true;"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		if r.URL.Path != "/v1/chat/completions" {
+			t.Fatalf("path = %q", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer test-key" {
+			t.Fatalf("authorization header = %q", r.Header.Get("Authorization"))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"Review this migration in smaller steps."}}]}`))
+	}))
+	defer server.Close()
+	t.Setenv("MGUARD_TEST_AI_KEY", "test-key")
+
+	var stdout, stderr bytes.Buffer
+	code := run(context.Background(), []string{
+		"check",
+		"-format", "json",
+		"-fail-on", "critical",
+		"-ai-provider", "openai-compatible",
+		"-ai-base-url", server.URL,
+		"-ai-model", "gateway-model",
+		"-ai-api-key-env", "MGUARD_TEST_AI_KEY",
+		migration,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("code = %d, stderr = %s, stdout = %s", code, stderr.String(), stdout.String())
+	}
+	if requests == 0 {
+		t.Fatalf("expected AI gateway request")
+	}
+	if !strings.Contains(stdout.String(), `"ai_explanation": "Review this migration in smaller steps."`) {
+		t.Fatalf("missing AI explanation in stdout:\n%s", stdout.String())
 	}
 }
 

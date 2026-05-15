@@ -4,6 +4,10 @@ All notable changes to mguard will be documented in this file.
 
 The project follows semantic versioning after the first stable release.
 
+## Unreleased
+
+- Added first-class OpenAI-compatible gateway support through `provider: openai-compatible`, configurable `base_url`, `model`, and CLI/GitHub Action overrides.
+
 ## 0.1.0 - Initial public release
 
 - Added deterministic PostgreSQL migration safety rules.

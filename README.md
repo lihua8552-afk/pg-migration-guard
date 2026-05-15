@@ -102,6 +102,11 @@ jobs:
           fail-on: high
           format: markdown
           comment-pr: "true"
+          ai-provider: openai-compatible
+          ai-base-url: ${{ secrets.AI_BASE_URL }}
+          ai-model: deepseek-chat
+          ai-api-key: ${{ secrets.AI_API_KEY }}
+          ai-redact: "true"
 ```
 
 ## Optional Database Metadata
@@ -126,13 +131,30 @@ grant select on all tables in schema public to mguard_readonly;
 
 ## AI BYOK
 
-AI explanations are optional. Supported providers are `openai`, `anthropic`, and `ollama`.
+AI explanations are optional. Supported providers are `openai`, `openai-compatible`, `anthropic`, and `ollama`.
 
 When AI is enabled, mguard sends each finding's rule, severity, file location, SQL statement, reason, and recommendation to the configured provider. Use `redact_sql: true` or `--ai-redact` to replace string and numeric SQL literals, including dollar-quoted bodies and `E'...'`/`B'...'`/`X'...'` strings. Table and column names remain visible because they are needed for useful migration advice.
 
+For OpenAI-compatible proxy gateways, set the API key env var, gateway URL, and model:
+
+```yaml
+ai:
+  enabled: true
+  provider: openai-compatible
+  model: deepseek-chat
+  api_key_env: MGUARD_AI_KEY
+  base_url: https://your-gateway.example.com/v1
+  redact_sql: true
+```
+
+`base_url` may be a `/v1` base URL or a full `/v1/chat/completions` endpoint. You can also pass the same settings from the CLI:
+
 ```sh
-MGUARD_AI_KEY=... mguard check migrations --ai on
-MGUARD_AI_KEY=... mguard check migrations --ai on --ai-redact
+MGUARD_AI_KEY=... mguard check migrations \
+  --ai-provider openai-compatible \
+  --ai-base-url https://your-gateway.example.com/v1 \
+  --ai-model deepseek-chat \
+  --ai-redact
 ```
 
 ## Rule Coverage

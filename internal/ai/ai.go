@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -35,7 +36,27 @@ func NewClient(cfg config.AIConfig) (Client, error) {
 		if cfg.BaseURL == "" {
 			cfg.BaseURL = "https://api.openai.com/v1"
 		}
-		return &openAIClient{baseURL: strings.TrimRight(cfg.BaseURL, "/"), apiKey: key, model: cfg.Model, http: defaultHTTPClient()}, nil
+		endpoint, err := openAIChatCompletionsEndpoint(cfg.BaseURL)
+		if err != nil {
+			return nil, err
+		}
+		return &openAIClient{chatCompletionsURL: endpoint, apiKey: key, model: cfg.Model, http: defaultHTTPClient()}, nil
+	case "openai-compatible", "openai_compatible", "compatible", "custom":
+		key := os.Getenv(cfg.APIKeyEnv)
+		if key == "" {
+			return nil, fmt.Errorf("missing API key env %s", cfg.APIKeyEnv)
+		}
+		if strings.TrimSpace(cfg.Model) == "" {
+			return nil, fmt.Errorf("missing ai.model for OpenAI-compatible provider")
+		}
+		if strings.TrimSpace(cfg.BaseURL) == "" {
+			return nil, fmt.Errorf("missing ai.base_url for OpenAI-compatible provider")
+		}
+		endpoint, err := openAIChatCompletionsEndpoint(cfg.BaseURL)
+		if err != nil {
+			return nil, err
+		}
+		return &openAIClient{chatCompletionsURL: endpoint, apiKey: key, model: cfg.Model, http: defaultHTTPClient()}, nil
 	case "anthropic":
 		key := os.Getenv(cfg.APIKeyEnv)
 		if key == "" {
@@ -57,7 +78,7 @@ func NewClient(cfg config.AIConfig) (Client, error) {
 		}
 		return &ollamaClient{baseURL: strings.TrimRight(cfg.BaseURL, "/"), model: cfg.Model, http: defaultHTTPClient()}, nil
 	default:
-		return nil, fmt.Errorf("unknown ai provider %q", cfg.Provider)
+		return nil, fmt.Errorf("unknown ai provider %q; supported providers are openai, openai-compatible, anthropic, and ollama", cfg.Provider)
 	}
 }
 
@@ -177,10 +198,10 @@ func readDollarTag(s string) (tag string, length int, ok bool) {
 }
 
 type openAIClient struct {
-	baseURL string
-	apiKey  string
-	model   string
-	http    *http.Client
+	chatCompletionsURL string
+	apiKey             string
+	model              string
+	http               *http.Client
 }
 
 func (c *openAIClient) Explain(ctx context.Context, finding model.Finding) (string, error) {
@@ -196,7 +217,7 @@ func (c *openAIClient) Explain(ctx context.Context, finding model.Finding) (stri
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.chatCompletionsURL, bytes.NewReader(data))
 	if err != nil {
 		return "", err
 	}
@@ -216,6 +237,26 @@ func (c *openAIClient) Explain(ctx context.Context, finding model.Finding) (stri
 		return "", fmt.Errorf("empty OpenAI response")
 	}
 	return resp.Choices[0].Message.Content, nil
+}
+
+func openAIChatCompletionsEndpoint(rawBaseURL string) (string, error) {
+	base := strings.TrimRight(strings.TrimSpace(rawBaseURL), "/")
+	if base == "" {
+		return "", fmt.Errorf("missing OpenAI-compatible base URL")
+	}
+	parsed, err := url.Parse(base)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("invalid OpenAI-compatible base URL %q", rawBaseURL)
+	}
+	if strings.HasSuffix(strings.TrimRight(parsed.Path, "/"), "/chat/completions") {
+		return parsed.String(), nil
+	}
+	path := strings.TrimRight(parsed.Path, "/")
+	if path == "" {
+		path = "/v1"
+	}
+	parsed.Path = path + "/chat/completions"
+	return parsed.String(), nil
 }
 
 type anthropicClient struct {

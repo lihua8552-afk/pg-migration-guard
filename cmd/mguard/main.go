@@ -74,14 +74,22 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	format := fs.String("format", "text", "output format: text, json, markdown, sarif")
 	failOn := fs.String("fail-on", "", "exit non-zero at or above severity: low, medium, high, critical")
 	aiMode := fs.String("ai", "", "AI explanations: on or off")
+	aiProvider := fs.String("ai-provider", "", "AI provider: openai, openai-compatible, anthropic, ollama")
+	aiModel := fs.String("ai-model", "", "AI model name")
+	aiBaseURL := fs.String("ai-base-url", "", "AI provider base URL; for OpenAI-compatible gateways use /v1 or /v1/chat/completions")
+	aiAPIKeyEnv := fs.String("ai-api-key-env", "", "environment variable containing the AI API key")
 	aiRedact := fs.Bool("ai-redact", false, "redact SQL literals before sending findings to AI providers")
 	aiRedactOverride := boolFlagOverride(args, "ai-redact", aiRedact)
 	if err := fs.Parse(normalizeCheckArgs(args, map[string]bool{
-		"config":  true,
-		"dsn-env": true,
-		"format":  true,
-		"fail-on": true,
-		"ai":      true,
+		"config":         true,
+		"dsn-env":        true,
+		"format":         true,
+		"fail-on":        true,
+		"ai":             true,
+		"ai-provider":    true,
+		"ai-model":       true,
+		"ai-base-url":    true,
+		"ai-api-key-env": true,
 	})); err != nil {
 		return 2
 	}
@@ -93,6 +101,27 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	if *failOn != "" {
 		cfg.Risk.FailOn = *failOn
 	}
+	aiConfigOverridden := false
+	if *aiProvider != "" {
+		cfg.AI.Provider = *aiProvider
+		aiConfigOverridden = true
+	}
+	if *aiModel != "" {
+		cfg.AI.Model = *aiModel
+		aiConfigOverridden = true
+	}
+	if *aiBaseURL != "" {
+		cfg.AI.BaseURL = *aiBaseURL
+		aiConfigOverridden = true
+	}
+	if *aiAPIKeyEnv != "" {
+		cfg.AI.APIKeyEnv = *aiAPIKeyEnv
+		aiConfigOverridden = true
+	}
+	aiOverride := *aiMode
+	if aiOverride == "" && aiConfigOverridden {
+		aiOverride = "on"
+	}
 	threshold, err := model.ParseSeverity(cfg.Risk.FailOn)
 	if err != nil {
 		fmt.Fprintf(stderr, "invalid fail-on severity: %v\n", err)
@@ -103,7 +132,7 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 		Paths:       fs.Args(),
 		StrictPaths: len(fs.Args()) > 0,
 		DSNEnv:      *dsnEnv,
-		AIOverride:  *aiMode,
+		AIOverride:  aiOverride,
 		AIRedactSQL: aiRedactOverride,
 		Format:      *format,
 		Config:      cfg,
@@ -173,6 +202,10 @@ Common check flags:
   -format string    text, json, markdown, sarif
   -fail-on string   low, medium, high, critical
   -ai string        on or off
+  -ai-provider      openai, openai-compatible, anthropic, ollama
+  -ai-model         model name for AI explanations
+  -ai-base-url      AI API base URL, including /v1 for OpenAI-compatible gateways
+  -ai-api-key-env   env var containing the AI API key
   -ai-redact        redact SQL literals before AI explanations
 `))
 }

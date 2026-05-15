@@ -10,6 +10,6 @@ Do not file public issues for vulnerabilities that could expose user databases, 
 
 mguard is designed to run locally or in CI. It does not execute migrations and does not modify database schema.
 
-When AI explanations are enabled, mguard sends only the finding SQL, rule result, file location, and necessary metadata for that finding to the configured provider. AI is disabled by default. Use `ai.redact_sql: true` or `--ai-redact` to redact single-quoted, dollar-quoted, and escape-prefixed (`E'...'`, `B'...'`, `X'...'`) string literals plus numeric literals before prompts are sent. The flag only takes effect when AI is enabled.
+When AI explanations are enabled, mguard sends only the finding SQL, rule result, file location, and necessary metadata for that finding to the configured provider, including OpenAI-compatible proxy gateways configured with `ai.base_url`. AI is disabled by default. Use `ai.redact_sql: true` or `--ai-redact` to redact single-quoted, dollar-quoted, and escape-prefixed (`E'...'`, `B'...'`, `X'...'`) string literals plus numeric literals before prompts are sent. The flag only takes effect when AI is enabled.
 
 Use a read-only PostgreSQL role for `DATABASE_URL`.

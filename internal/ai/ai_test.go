@@ -2,10 +2,15 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/lihua8552-afk/pg-migration-guard/internal/config"
 	"github.com/lihua8552-afk/pg-migration-guard/internal/model"
 )
 
@@ -107,4 +112,127 @@ func TestRedactSQLLiteralsHandlesDollarQuotedAndEscapeStrings(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewClientSupportsOpenAICompatibleGateway(t *testing.T) {
+	t.Setenv("MGUARD_TEST_AI_KEY", "test-key")
+	var gotPath, gotAuth, gotModel string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotAuth = r.Header.Get("Authorization")
+		var body struct {
+			Model    string `json:"model"`
+			Messages []struct {
+				Role    string `json:"role"`
+				Content string `json:"content"`
+			} `json:"messages"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		gotModel = body.Model
+		if len(body.Messages) == 0 {
+			t.Fatalf("missing messages in request")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"Use a staged migration."}}]}`))
+	}))
+	defer server.Close()
+
+	client, err := NewClient(config.AIConfig{
+		Provider:  "openai-compatible",
+		Model:     "deepseek-chat",
+		APIKeyEnv: "MGUARD_TEST_AI_KEY",
+		BaseURL:   server.URL + "/v1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	text, err := client.Explain(context.Background(), model.Finding{
+		RuleID:         "MGD030",
+		Severity:       model.SeverityHigh,
+		Statement:      "UPDATE users SET disabled = true",
+		Reason:         "UPDATE without WHERE.",
+		Recommendation: "Batch or add a WHERE clause.",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if text != "Use a staged migration." {
+		t.Fatalf("text = %q", text)
+	}
+	if gotPath != "/v1/chat/completions" {
+		t.Fatalf("path = %q", gotPath)
+	}
+	if gotAuth != "Bearer test-key" {
+		t.Fatalf("auth = %q", gotAuth)
+	}
+	if gotModel != "deepseek-chat" {
+		t.Fatalf("model = %q", gotModel)
+	}
+}
+
+func TestOpenAICompatibleRequiresModelAndBaseURL(t *testing.T) {
+	t.Setenv("MGUARD_TEST_AI_KEY", "test-key")
+	_, err := NewClient(config.AIConfig{
+		Provider:  "openai-compatible",
+		APIKeyEnv: "MGUARD_TEST_AI_KEY",
+		BaseURL:   "https://relay.example.com/v1",
+	})
+	if err == nil || !strings.Contains(err.Error(), "ai.model") {
+		t.Fatalf("expected missing model error, got %v", err)
+	}
+	_, err = NewClient(config.AIConfig{
+		Provider:  "openai-compatible",
+		Model:     "deepseek-chat",
+		APIKeyEnv: "MGUARD_TEST_AI_KEY",
+	})
+	if err == nil || !strings.Contains(err.Error(), "ai.base_url") {
+		t.Fatalf("expected missing base URL error, got %v", err)
+	}
+}
+
+func TestOpenAIChatCompletionsEndpointAcceptsCommonGatewayURLs(t *testing.T) {
+	cases := map[string]string{
+		"https://relay.example.com":                     "https://relay.example.com/v1/chat/completions",
+		"https://relay.example.com/v1":                  "https://relay.example.com/v1/chat/completions",
+		"https://relay.example.com/proxy/openai/v1":     "https://relay.example.com/proxy/openai/v1/chat/completions",
+		"https://relay.example.com/v1/chat/completions": "https://relay.example.com/v1/chat/completions",
+	}
+	for in, want := range cases {
+		got, err := openAIChatCompletionsEndpoint(in)
+		if err != nil {
+			t.Fatalf("endpoint(%q): %v", in, err)
+		}
+		if got != want {
+			t.Fatalf("endpoint(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestOpenAIProviderAllowsCustomBaseURLAndModel(t *testing.T) {
+	t.Setenv("MGUARD_TEST_AI_KEY", "test-key")
+	client, err := NewClient(config.AIConfig{
+		Provider:  "openai",
+		Model:     "gateway-model",
+		APIKeyEnv: "MGUARD_TEST_AI_KEY",
+		BaseURL:   "https://gateway.example.com/v1/chat/completions",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	openai, ok := client.(*openAIClient)
+	if !ok {
+		t.Fatalf("client type = %T", client)
+	}
+	if openai.chatCompletionsURL != "https://gateway.example.com/v1/chat/completions" {
+		t.Fatalf("endpoint = %q", openai.chatCompletionsURL)
+	}
+	if openai.model != "gateway-model" {
+		t.Fatalf("model = %q", openai.model)
+	}
+}
+
+func TestMain(m *testing.M) {
+	os.Exit(m.Run())
 }
